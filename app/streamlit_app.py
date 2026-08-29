@@ -161,15 +161,34 @@ if mode == "🎯 Demo Transaction":
 
     st.subheader("Demo Transaction")
 
-    demo_values = {
-        feature: 0.0
-        for feature in feature_columns
-    }
+    # ============================================================
+    # LOAD REAL DEMO TRANSACTION
+    # ============================================================
 
-    demo_df = pd.DataFrame(
-        [demo_values],
-        columns=feature_columns
+    DEMO_PATH = os.path.join(
+        BASE_DIR,
+        "model",
+        "demo_transaction.csv"
     )
+
+    try:
+
+        demo_df = pd.read_csv(DEMO_PATH)
+
+        # Keep exactly the features used by the trained model
+        demo_df = demo_df[feature_columns]
+
+        st.success(
+            f"Demo transaction loaded successfully with {len(feature_columns)} features."
+    )
+
+    except Exception as e:
+
+        st.error(
+            f"Could not load demo transaction: {str(e)}"
+    )
+
+    st.stop()
 
     st.write(
         f"**{len(feature_columns)} model features loaded successfully.**"
