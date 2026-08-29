@@ -24,6 +24,7 @@ MODEL_DIR = os.path.join(BASE_DIR, "model")
 
 MODEL_PATH = os.path.join(MODEL_DIR, "fraud_model.pkl")
 FEATURES_PATH = os.path.join(MODEL_DIR, "features.pkl")
+DEMO_PATH = os.path.join(MODEL_DIR, "demo_transaction.csv")
 
 FRAUD_THRESHOLD = 0.8294
 
@@ -148,6 +149,15 @@ mode = st.radio(
 
 
 # ============================================================
+# INITIALIZE VARIABLES
+# ============================================================
+
+predict_button = False
+input_df = None
+demo_df = None
+
+
+# ============================================================
 # DEMO TRANSACTION
 # ============================================================
 
@@ -161,15 +171,9 @@ if mode == "🎯 Demo Transaction":
 
     st.subheader("Demo Transaction")
 
-    # ============================================================
-    # LOAD REAL DEMO TRANSACTION
-    # ============================================================
-
-    DEMO_PATH = os.path.join(
-        BASE_DIR,
-        "model",
-        "demo_transaction.csv"
-    )
+    # --------------------------------------------------------
+    # LOAD DEMO TRANSACTION
+    # --------------------------------------------------------
 
     try:
 
@@ -179,7 +183,8 @@ if mode == "🎯 Demo Transaction":
         demo_df = demo_df[feature_columns]
 
         st.success(
-            f"Demo transaction loaded successfully with {len(feature_columns)} features."
+            f"Demo transaction loaded successfully with "
+            f"{len(feature_columns)} features."
         )
 
     except Exception as e:
@@ -190,9 +195,19 @@ if mode == "🎯 Demo Transaction":
 
         st.stop()
 
+
+    # --------------------------------------------------------
+    # DISPLAY FEATURE COUNT
+    # --------------------------------------------------------
+
     st.write(
         f"**{len(feature_columns)} model features loaded successfully.**"
     )
+
+
+    # --------------------------------------------------------
+    # VIEW DEMO FEATURES
+    # --------------------------------------------------------
 
     with st.expander("View Demo Feature Values"):
 
@@ -203,92 +218,26 @@ if mode == "🎯 Demo Transaction":
             use_container_width=True
         )
 
+
+    # --------------------------------------------------------
+    # DEMO PREDICTION BUTTON
+    # --------------------------------------------------------
+
     predict_button = st.button(
         "🔍 Analyze Demo Transaction",
         type="primary",
         use_container_width=True
     )
 
-# ============================================================
-# DEMO TRANSACTION PREDICTION
-# ============================================================
-
-if mode == "🎯 Demo Transaction" and predict_button:
-
-    try:
-
-        # Generate fraud probability
-        fraud_probability = float(
-            model.predict_proba(demo_df)[0][1]
-        )
-
-        # Apply optimized classification threshold
-        prediction = int(
-            fraud_probability >= FRAUD_THRESHOLD
-        )
-
-        # Prediction label
-        if prediction == 1:
-            prediction_label = "Fraud"
-        else:
-            prediction_label = "Not Fraud"
-
-        # ----------------------------------------------------
-        # Display prediction result
-        # ----------------------------------------------------
-
-        st.markdown("---")
-
-        st.subheader("🔎 Prediction Result")
-
-        if prediction == 1:
-
-            st.error(
-                "🚨 Potential Fraudulent Transaction"
-            )
-
-        else:
-
-            st.success(
-                "✅ Transaction Classified as Not Fraud"
-            )
-
-        # ----------------------------------------------------
-        # Metrics
-        # ----------------------------------------------------
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            st.metric(
-                "Fraud Probability",
-                f"{fraud_probability:.2%}"
-            )
-
-        with col2:
-
-            st.metric(
-                "Classification Threshold",
-                f"{FRAUD_THRESHOLD:.4f}"
-            )
-
-        st.write(
-            f"**Prediction:** {prediction_label}"
-        )
-
-    except Exception as e:
-
-        st.error(
-            f"Prediction failed: {str(e)}"
-        )
+    # The dataframe used for prediction
+    input_df = demo_df
 
 
 # ============================================================
 # CUSTOM TRANSACTION
 # ============================================================
 
-elif mode == "🛠️ Custom Transaction":
+else:
 
     st.warning(
         "The trained model expects the same preprocessed "
@@ -296,8 +245,13 @@ elif mode == "🛠️ Custom Transaction":
     )
 
     st.write(
-        "Enter values for the 46 model features."
+        f"Enter values for the {len(feature_columns)} model features."
     )
+
+
+    # --------------------------------------------------------
+    # CREATE INPUT FIELDS
+    # --------------------------------------------------------
 
     input_values = {}
 
@@ -314,10 +268,20 @@ elif mode == "🛠️ Custom Transaction":
                 key=f"custom_feature_{i}"
             )
 
+
+    # --------------------------------------------------------
+    # CREATE INPUT DATAFRAME
+    # --------------------------------------------------------
+
     input_df = pd.DataFrame(
         [input_values],
         columns=feature_columns
     )
+
+
+    # --------------------------------------------------------
+    # CUSTOM PREDICTION BUTTON
+    # --------------------------------------------------------
 
     predict_button = st.button(
         "🔍 Analyze Transaction",
@@ -327,28 +291,61 @@ elif mode == "🛠️ Custom Transaction":
 
 
 # ============================================================
-# PREDICTION
+# SINGLE PREDICTION SECTION
 # ============================================================
 
-if mode != "🎯 Demo Transaction" and predict_button:
+if predict_button:
 
     try:
 
         # ----------------------------------------------------
-        # Generate fraud probability
+        # SAFETY CHECK
+        # ----------------------------------------------------
+
+        if input_df is None:
+
+            st.error(
+                "No transaction data available for prediction."
+            )
+
+            st.stop()
+
+
+        # ----------------------------------------------------
+        # ENSURE CORRECT FEATURE ORDER
+        # ----------------------------------------------------
+
+        input_df = input_df[feature_columns]
+
+
+        # ----------------------------------------------------
+        # CONVERT FEATURES TO NUMERIC
+        # ----------------------------------------------------
+
+        input_df = input_df.astype(float)
+
+
+        # ----------------------------------------------------
+        # GENERATE FRAUD PROBABILITY
         # ----------------------------------------------------
 
         fraud_probability = float(
             model.predict_proba(input_df)[0][1]
         )
 
+
         # ----------------------------------------------------
-        # Apply optimized threshold
+        # APPLY OPTIMIZED THRESHOLD
         # ----------------------------------------------------
 
         prediction = int(
             fraud_probability >= FRAUD_THRESHOLD
         )
+
+
+        # ----------------------------------------------------
+        # PREDICTION LABEL
+        # ----------------------------------------------------
 
         prediction_label = (
             "Fraud"
@@ -357,9 +354,9 @@ if mode != "🎯 Demo Transaction" and predict_button:
         )
 
 
-        # ----------------------------------------------------
-        # Result Section
-        # ----------------------------------------------------
+        # ====================================================
+        # RESULT SECTION
+        # ====================================================
 
         st.divider()
 
@@ -367,27 +364,28 @@ if mode != "🎯 Demo Transaction" and predict_button:
 
 
         # ----------------------------------------------------
-        # Main Result
+        # MAIN RESULT
         # ----------------------------------------------------
 
         if prediction == 1:
 
             st.error(
-                "🚨 FRAUDULENT TRANSACTION"
+                "🚨 Potential Fraudulent Transaction"
             )
 
         else:
 
             st.success(
-                "✅ NOT FRAUDULENT"
+                "✅ Transaction Classified as Not Fraud"
             )
 
 
         # ----------------------------------------------------
-        # Metrics
+        # METRICS
         # ----------------------------------------------------
 
         col1, col2, col3 = st.columns(3)
+
 
         with col1:
 
@@ -396,12 +394,14 @@ if mode != "🎯 Demo Transaction" and predict_button:
                 f"{fraud_probability * 100:.2f}%"
             )
 
+
         with col2:
 
             st.metric(
                 "Decision Threshold",
                 f"{FRAUD_THRESHOLD * 100:.2f}%"
             )
+
 
         with col3:
 
@@ -412,7 +412,7 @@ if mode != "🎯 Demo Transaction" and predict_button:
 
 
         # ----------------------------------------------------
-        # Probability Bar
+        # PROBABILITY BAR
         # ----------------------------------------------------
 
         st.write("### Fraud Probability")
@@ -428,9 +428,9 @@ if mode != "🎯 Demo Transaction" and predict_button:
         )
 
 
-        # ----------------------------------------------------
-        # Explanation
-        # ----------------------------------------------------
+        # ====================================================
+        # EXPLANATION
+        # ====================================================
 
         if prediction == 1:
 
@@ -460,32 +460,43 @@ if mode != "🎯 Demo Transaction" and predict_button:
             )
 
 
-        # ----------------------------------------------------
-        # Technical Details
-        # ----------------------------------------------------
+        # ====================================================
+        # TECHNICAL DETAILS
+        # ====================================================
 
-        with st.expander("📋 View Technical Prediction Details"):
+        with st.expander(
+            "📋 View Technical Prediction Details"
+        ):
 
             result_data = {
+
                 "Prediction": prediction,
+
                 "Prediction Label": prediction_label,
+
                 "Fraud Probability": round(
                     fraud_probability,
                     6
                 ),
+
                 "Fraud Threshold": FRAUD_THRESHOLD,
+
                 "Features Used": len(feature_columns),
+
                 "Model": "XGBoost Classifier"
+
             }
 
             st.json(result_data)
 
 
-        # ----------------------------------------------------
-        # Input Summary
-        # ----------------------------------------------------
+        # ====================================================
+        # INPUT FEATURES
+        # ====================================================
 
-        with st.expander("📊 View Input Features"):
+        with st.expander(
+            "📊 View Input Features"
+        ):
 
             st.dataframe(
                 input_df.T.rename(
