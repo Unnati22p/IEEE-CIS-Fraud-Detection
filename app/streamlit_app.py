@@ -209,6 +209,80 @@ if mode == "🎯 Demo Transaction":
         use_container_width=True
     )
 
+# ============================================================
+# DEMO TRANSACTION PREDICTION
+# ============================================================
+
+if predict_button:
+
+    try:
+
+        # Generate fraud probability
+        fraud_probability = float(
+            model.predict_proba(demo_df)[0][1]
+        )
+
+        # Apply optimized classification threshold
+        prediction = int(
+            fraud_probability >= FRAUD_THRESHOLD
+        )
+
+        # Prediction label
+        if prediction == 1:
+            prediction_label = "Fraud"
+        else:
+            prediction_label = "Not Fraud"
+
+        # ----------------------------------------------------
+        # Display prediction result
+        # ----------------------------------------------------
+
+        st.markdown("---")
+
+        st.subheader("🔎 Prediction Result")
+
+        if prediction == 1:
+
+            st.error(
+                "🚨 Potential Fraudulent Transaction"
+            )
+
+        else:
+
+            st.success(
+                "✅ Transaction Classified as Not Fraud"
+            )
+
+        # ----------------------------------------------------
+        # Metrics
+        # ----------------------------------------------------
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.metric(
+                "Fraud Probability",
+                f"{fraud_probability:.2%}"
+            )
+
+        with col2:
+
+            st.metric(
+                "Classification Threshold",
+                f"{FRAUD_THRESHOLD:.4f}"
+            )
+
+        st.write(
+            f"**Prediction:** {prediction_label}"
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"Prediction failed: {str(e)}"
+        )
+
 
 # ============================================================
 # CUSTOM TRANSACTION
