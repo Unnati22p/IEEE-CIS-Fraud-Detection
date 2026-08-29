@@ -288,7 +288,7 @@ if mode == "🎯 Demo Transaction" and predict_button:
 # CUSTOM TRANSACTION
 # ============================================================
 
-else:
+elif mode == "🛠️ Custom Transaction":
 
     st.warning(
         "The trained model expects the same preprocessed "
