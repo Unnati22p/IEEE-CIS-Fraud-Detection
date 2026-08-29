@@ -5,7 +5,7 @@ import os
 
 
 # ============================================================
-# IEEE-CIS FRAUD DETECTION - STREAMLIT APP
+# PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
@@ -41,28 +41,6 @@ def load_model():
     return model, feature_columns
 
 
-# ============================================================
-# HEADER
-# ============================================================
-
-st.title("🔐 IEEE-CIS Fraud Detection")
-
-st.markdown(
-    """
-    **Machine Learning Fraud Detection using XGBoost**
-
-    This application uses a trained XGBoost classifier to estimate
-    the probability that an online transaction is fraudulent.
-    """
-)
-
-st.divider()
-
-
-# ============================================================
-# LOAD MODEL AND FEATURES
-# ============================================================
-
 try:
 
     model, feature_columns = load_model()
@@ -74,79 +52,185 @@ except Exception as e:
     st.code(str(e))
 
     st.info(
-        "Make sure fraud_model.pkl and features.pkl are inside the model folder."
+        "Make sure fraud_model.pkl and features.pkl "
+        "are inside the model folder."
     )
 
     st.stop()
 
 
 # ============================================================
-# SIDEBAR
+# HEADER
 # ============================================================
 
-st.sidebar.header("Model Information")
+st.title("🔐 IEEE-CIS Fraud Detection")
 
-st.sidebar.write("**Algorithm:** XGBoost Classifier")
-st.sidebar.write("**Features:**", len(feature_columns))
-st.sidebar.write(
-    "**Fraud Threshold:**",
-    FRAUD_THRESHOLD
+st.markdown(
+    """
+    ### Machine Learning Fraud Detection using XGBoost
+
+    An end-to-end machine learning application for detecting
+    potentially fraudulent online transactions using the
+    IEEE-CIS Fraud Detection dataset.
+    """
+)
+
+st.divider()
+
+
+# ============================================================
+# SIDEBAR - MODEL INFORMATION
+# ============================================================
+
+st.sidebar.title("📊 Model Information")
+
+st.sidebar.metric(
+    "Algorithm",
+    "XGBoost"
+)
+
+st.sidebar.metric(
+    "Features",
+    len(feature_columns)
+)
+
+st.sidebar.metric(
+    "Fraud Threshold",
+    f"{FRAUD_THRESHOLD:.4f}"
+)
+
+st.sidebar.divider()
+
+st.sidebar.markdown(
+    """
+    **Model Performance**
+
+    - ROC-AUC: **0.9441**
+    - PR-AUC: **0.6563**
+    - Precision: **0.7039**
+    - Recall: **0.5621**
+    - F1-Score: **0.6251**
+    """
 )
 
 st.sidebar.divider()
 
 st.sidebar.caption(
-    "The threshold was optimized during model evaluation."
+    "The classification threshold was optimized "
+    "during model evaluation."
 )
 
 
 # ============================================================
-# TRANSACTION INPUT
+# INTRODUCTION
 # ============================================================
 
-st.subheader("Transaction Features")
+st.subheader("🧾 Transaction Analysis")
 
 st.write(
-    "Enter the numerical feature values used by the trained model."
-)
-
-st.warning(
-    "The model expects the same preprocessed numerical features "
-    "used during training."
+    "Choose a transaction mode below and use the trained "
+    "XGBoost model to estimate fraud probability."
 )
 
 
 # ============================================================
-# FEATURE INPUTS
+# TRANSACTION MODE
 # ============================================================
 
-input_values = {}
+mode = st.radio(
+    "Select transaction mode",
+    [
+        "🎯 Demo Transaction",
+        "🛠️ Custom Transaction"
+    ],
+    horizontal=True
+)
 
-columns = st.columns(3)
 
-for i, feature in enumerate(feature_columns):
+# ============================================================
+# DEMO TRANSACTION
+# ============================================================
 
-    with columns[i % 3]:
+if mode == "🎯 Demo Transaction":
 
-        input_values[feature] = st.number_input(
-            feature,
-            value=0.0,
-            format="%.6f",
-            key=f"feature_{i}"
+    st.info(
+        "The demo uses a sample set of preprocessed feature "
+        "values. This allows you to test the deployed model "
+        "without manually entering all 46 features."
+    )
+
+    st.subheader("Demo Transaction")
+
+    demo_values = {
+        feature: 0.0
+        for feature in feature_columns
+    }
+
+    demo_df = pd.DataFrame(
+        [demo_values],
+        columns=feature_columns
+    )
+
+    st.write(
+        f"**{len(feature_columns)} model features loaded successfully.**"
+    )
+
+    with st.expander("View Demo Feature Values"):
+
+        st.dataframe(
+            demo_df.T.rename(
+                columns={0: "Value"}
+            ),
+            use_container_width=True
         )
 
+    predict_button = st.button(
+        "🔍 Analyze Demo Transaction",
+        type="primary",
+        use_container_width=True
+    )
+
 
 # ============================================================
-# PREDICTION BUTTON
+# CUSTOM TRANSACTION
 # ============================================================
 
-st.divider()
+else:
 
-predict_button = st.button(
-    "🔍 Predict Transaction",
-    type="primary",
-    use_container_width=True
-)
+    st.warning(
+        "The trained model expects the same preprocessed "
+        "numerical features used during training."
+    )
+
+    st.write(
+        "Enter values for the 46 model features."
+    )
+
+    input_values = {}
+
+    columns = st.columns(3)
+
+    for i, feature in enumerate(feature_columns):
+
+        with columns[i % 3]:
+
+            input_values[feature] = st.number_input(
+                feature,
+                value=0.0,
+                format="%.6f",
+                key=f"custom_feature_{i}"
+            )
+
+    input_df = pd.DataFrame(
+        [input_values],
+        columns=feature_columns
+    )
+
+    predict_button = st.button(
+        "🔍 Analyze Transaction",
+        type="primary",
+        use_container_width=True
+    )
 
 
 # ============================================================
@@ -157,67 +241,46 @@ if predict_button:
 
     try:
 
-        # Create dataframe in exact training feature order
-        input_data = {
-            feature: input_values[feature]
-            for feature in feature_columns
-        }
-
-        input_df = pd.DataFrame(
-            [input_data],
-            columns=feature_columns
-        )
-
+        # ----------------------------------------------------
         # Generate fraud probability
+        # ----------------------------------------------------
+
         fraud_probability = float(
             model.predict_proba(input_df)[0][1]
         )
 
+        # ----------------------------------------------------
         # Apply optimized threshold
+        # ----------------------------------------------------
+
         prediction = int(
             fraud_probability >= FRAUD_THRESHOLD
         )
 
-
-        # ====================================================
-        # DISPLAY RESULTS
-        # ====================================================
-
-        st.subheader("Prediction Result")
-
-        result_col1, result_col2 = st.columns(2)
-
-        with result_col1:
-
-            st.metric(
-                "Fraud Probability",
-                f"{fraud_probability * 100:.2f}%"
-            )
-
-        with result_col2:
-
-            st.metric(
-                "Classification Threshold",
-                f"{FRAUD_THRESHOLD * 100:.2f}%"
-            )
-
-
-        st.progress(
-            min(max(fraud_probability, 0.0), 1.0)
+        prediction_label = (
+            "Fraud"
+            if prediction == 1
+            else "Not Fraud"
         )
 
+
+        # ----------------------------------------------------
+        # Result Section
+        # ----------------------------------------------------
+
+        st.divider()
+
+        st.subheader("🔎 Prediction Result")
+
+
+        # ----------------------------------------------------
+        # Main Result
+        # ----------------------------------------------------
 
         if prediction == 1:
 
             st.error(
                 "🚨 FRAUDULENT TRANSACTION"
-            )
-
-            st.write(
-                f"The predicted fraud probability is "
-                f"**{fraud_probability * 100:.2f}%**, "
-                f"which is above the optimized threshold of "
-                f"**{FRAUD_THRESHOLD * 100:.2f}%**."
             )
 
         else:
@@ -226,35 +289,116 @@ if predict_button:
                 "✅ NOT FRAUDULENT"
             )
 
-            st.write(
-                f"The predicted fraud probability is "
-                f"**{fraud_probability * 100:.2f}%**, "
-                f"which is below the optimized threshold of "
-                f"**{FRAUD_THRESHOLD * 100:.2f}%**."
+
+        # ----------------------------------------------------
+        # Metrics
+        # ----------------------------------------------------
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+
+            st.metric(
+                "Fraud Probability",
+                f"{fraud_probability * 100:.2f}%"
+            )
+
+        with col2:
+
+            st.metric(
+                "Decision Threshold",
+                f"{FRAUD_THRESHOLD * 100:.2f}%"
+            )
+
+        with col3:
+
+            st.metric(
+                "Prediction",
+                prediction_label
             )
 
 
-        # ====================================================
-        # TECHNICAL RESULT
-        # ====================================================
+        # ----------------------------------------------------
+        # Probability Bar
+        # ----------------------------------------------------
 
-        with st.expander("View Prediction Details"):
+        st.write("### Fraud Probability")
+
+        st.progress(
+            min(
+                max(
+                    fraud_probability,
+                    0.0
+                ),
+                1.0
+            )
+        )
+
+
+        # ----------------------------------------------------
+        # Explanation
+        # ----------------------------------------------------
+
+        if prediction == 1:
 
             st.write(
-                {
-                    "prediction": prediction,
-                    "prediction_label": (
-                        "Fraud"
-                        if prediction == 1
-                        else "Not Fraud"
-                    ),
-                    "fraud_probability": round(
-                        fraud_probability,
-                        6
-                    ),
-                    "threshold": FRAUD_THRESHOLD,
-                    "features_used": len(feature_columns)
-                }
+                f"""
+                The model estimated a fraud probability of
+                **{fraud_probability * 100:.2f}%**.
+
+                This is above the optimized classification
+                threshold of **{FRAUD_THRESHOLD * 100:.2f}%**,
+                so the transaction is classified as **Fraud**.
+                """
+            )
+
+        else:
+
+            st.write(
+                f"""
+                The model estimated a fraud probability of
+                **{fraud_probability * 100:.2f}%**.
+
+                This is below the optimized classification
+                threshold of **{FRAUD_THRESHOLD * 100:.2f}%**,
+                so the transaction is classified as
+                **Not Fraud**.
+                """
+            )
+
+
+        # ----------------------------------------------------
+        # Technical Details
+        # ----------------------------------------------------
+
+        with st.expander("📋 View Technical Prediction Details"):
+
+            result_data = {
+                "Prediction": prediction,
+                "Prediction Label": prediction_label,
+                "Fraud Probability": round(
+                    fraud_probability,
+                    6
+                ),
+                "Fraud Threshold": FRAUD_THRESHOLD,
+                "Features Used": len(feature_columns),
+                "Model": "XGBoost Classifier"
+            }
+
+            st.json(result_data)
+
+
+        # ----------------------------------------------------
+        # Input Summary
+        # ----------------------------------------------------
+
+        with st.expander("📊 View Input Features"):
+
+            st.dataframe(
+                input_df.T.rename(
+                    columns={0: "Value"}
+                ),
+                use_container_width=True
             )
 
 
@@ -268,11 +412,18 @@ if predict_button:
 
 
 # ============================================================
-# FOOTER
+# MODEL DISCLAIMER
 # ============================================================
 
 st.divider()
 
 st.caption(
-    "IEEE-CIS Fraud Detection | XGBoost | Machine Learning Project"
+    "This application is a machine learning demonstration "
+    "based on the IEEE-CIS Fraud Detection dataset. "
+    "Predictions should not be treated as financial or "
+    "security decisions without additional validation."
+)
+
+st.caption(
+    "IEEE-CIS Fraud Detection • XGBoost • Streamlit"
 )
