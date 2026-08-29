@@ -8,7 +8,7 @@ The project focuses on handling highly imbalanced transaction data, building an 
 
 ## 🚀 Live Demo
 
-👉 [Try the Live Streamlit App](https://ieee-cis-fraudetection.streamlit.app/)
+👉 [Try the Live Streamlit App](https://ieee-cis-frauddetection.streamlit.app)
 
 The application provides an interactive interface for predicting whether an online transaction is potentially fraudulent using the trained XGBoost model.
 
