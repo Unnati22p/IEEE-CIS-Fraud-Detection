@@ -330,7 +330,7 @@ else:
 # PREDICTION
 # ============================================================
 
-if predict_button:
+if mode != "🎯 Demo Transaction" and predict_button:
 
     try:
 
