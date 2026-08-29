@@ -5,3 +5,7 @@ xgboost
 matplotlib
 seaborn
 jupyter
+fastapi
+uvicorn
+joblib
+pydantic
