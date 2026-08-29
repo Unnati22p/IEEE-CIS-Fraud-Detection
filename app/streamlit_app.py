@@ -180,15 +180,15 @@ if mode == "🎯 Demo Transaction":
 
         st.success(
             f"Demo transaction loaded successfully with {len(feature_columns)} features."
-    )
+        )
 
     except Exception as e:
 
         st.error(
             f"Could not load demo transaction: {str(e)}"
-    )
+        )
 
-    st.stop()
+        st.stop()
 
     st.write(
         f"**{len(feature_columns)} model features loaded successfully.**"
